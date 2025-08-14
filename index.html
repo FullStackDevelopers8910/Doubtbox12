@@ -2,144 +2,150 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DoubtBox - Live Doubt Sharing</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Doubt Tracker (Firebase)</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f0f2f5;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    header {
-      background: #4a90e2;
-      color: white;
-      padding: 15px;
-      width: 100%;
-      text-align: center;
-      font-size: 24px;
-      font-weight: bold;
-    }
-    form {
-      background: white;
-      padding: 15px;
-      margin-top: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      width: 90%;
-      max-width: 400px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    input, button {
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 16px;
-    }
-    button {
-      background: #4a90e2;
-      color: white;
-      cursor: pointer;
-      border: none;
-    }
-    button:hover {
-      background: #357ab7;
-    }
-    #doubtList {
-      margin-top: 20px;
-      background: white;
-      padding: 15px;
-      border-radius: 8px;
-      width: 90%;
-      max-width: 400px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    .doubtItem {
-      padding: 8px;
-      border-bottom: 1px solid #eee;
-    }
-    .doubtItem:last-child {
-      border-bottom: none;
-    }
-    .name {
-      font-weight: bold;
-      color: #333;
-    }
-    .message {
-      color: #555;
-    }
+    body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+    .container { width: 90%; max-width: 700px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    h1, h2 { text-align: center; }
+    .input-field, textarea { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; }
+    .btn { padding: 12px; width: 100%; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; color: white; }
+    .btn-primary { background-color: #4CAF50; }
+    .btn-primary:hover { background-color: #45a049; }
+    .btn-secondary { background-color: #2196F3; }
+    .btn-secondary:hover { background-color: #0b7dda; }
+    .btn-danger { background-color: #f44336; }
+    .btn-danger:hover { background-color: #d32f2f; }
+    .doubt-item { background: #f9f9f9; padding: 15px; margin-top: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .doubt-title { font-weight: bold; font-size: 18px; }
+    .doubt-info { font-size: 14px; color: #555; }
+    .answers { margin-top: 10px; }
+    .answer { background-color: #e1f5fe; padding: 8px; margin-top: 5px; border-left: 4px solid #2196F3; }
   </style>
 </head>
 <body>
 
-  <header>💬 DoubtBox</header>
+<div class="container">
+  <h1>📚 Daily Doubt Tracker</h1>
 
-  <form id="doubtForm">
-    <input type="text" id="name" placeholder="Your Name" required>
-    <input type="text" id="doubt" placeholder="Enter your doubt" required>
-    <button type="submit">Submit Doubt</button>
-  </form>
+  <input type="text" id="subject" placeholder="Subject" class="input-field" maxlength="100">
+  <input type="text" id="title" placeholder="Doubt Title" class="input-field" maxlength="100">
+  <textarea id="description" placeholder="Description (optional)" class="input-field" maxlength="300"></textarea>
+  <button onclick="addDoubt()" class="btn btn-primary">➕ Add Doubt</button>
 
-  <div id="doubtList">
-    <h3>Live Doubts:</h3>
-  </div>
+  <h2>Your Doubts:</h2>
+  <div id="doubts-list"></div>
+</div>
 
-  <!-- Firebase SDK -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-analytics.js";
-    import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-database.js";
+<script type="module">
+  // Firebase imports
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+  import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-database.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDhrjkI6C1Uu1fnBy4IW9t_9dPRSw2bO2g",
-      authDomain: "doubtbox-cfcfc.firebaseapp.com",
-      projectId: "doubtbox-cfcfc",
-      storageBucket: "doubtbox-cfcfc.firebasestorage.app",
-      messagingSenderId: "879741880799",
-      appId: "1:879741880799:web:fd242a59ea599cbdee1c6a",
-      measurementId: "G-8ZR6PQVGL4",
-      databaseURL: "https://doubtbox-cfcfc-default-rtdb.asia-southeast1.firebasedatabase.app/"
-    };
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyDhrjkI6C1Uu1fnBy4IW9t_9dPRSw2bO2g",
+    authDomain: "doubtbox-cfcfc.firebaseapp.com",
+    projectId: "doubtbox-cfcfc",
+    storageBucket: "doubtbox-cfcfc.firebasestorage.app",
+    messagingSenderId: "879741880799",
+    appId: "1:879741880799:web:fd242a59ea599cbdee1c6a",
+    databaseURL: "https://doubtbox-cfcfc-default-rtdb.asia-southeast1.firebasedatabase.app/"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
-    const db = getDatabase(app);
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
 
-    document.getElementById("doubtForm").addEventListener("submit", (e) => {
-      e.preventDefault();
-      const name = document.getElementById("name").value.trim();
-      const doubt = document.getElementById("doubt").value.trim();
+  // Add doubt to Firebase
+  function addDoubt() {
+    const subject = document.getElementById("subject").value.trim();
+    const title = document.getElementById("title").value.trim();
+    const description = document.getElementById("description").value.trim();
 
-      if (name && doubt) {
-        push(ref(db, "doubts"), {
-          name: name,
-          doubt: doubt,
-          timestamp: Date.now()
-        });
-        document.getElementById("doubtForm").reset();
-      }
+    if (!subject || !title) {
+      alert("Please fill out subject and title!");
+      return;
+    }
+
+    push(ref(db, "doubts"), {
+      subject,
+      title,
+      description,
+      answers: [],
+      timestamp: Date.now()
     });
 
-    const doubtList = document.getElementById("doubtList");
-    onValue(ref(db, "doubts"), (snapshot) => {
-      let html = "<h3>Live Doubts:</h3>";
-      snapshot.forEach((child) => {
-        const data = child.val();
-        html += `
-          <div class="doubtItem">
-            <span class="name">${data.name}</span>: 
-            <span class="message">${data.doubt}</span>
+    document.getElementById("subject").value = "";
+    document.getElementById("title").value = "";
+    document.getElementById("description").value = "";
+  }
+
+  // Delete a doubt
+  window.deleteDoubt = function(id) {
+    remove(ref(db, "doubts/" + id));
+  };
+
+  // Toggle answer form
+  window.toggleAnswerForm = function(id) {
+    const form = document.getElementById(`answer-form-${id}`);
+    form.style.display = form.style.display === "block" ? "none" : "block";
+  };
+
+  // Submit an answer
+  window.submitAnswer = function(id) {
+    const answerText = document.getElementById(`answer-text-${id}`).value.trim();
+    if (!answerText) return alert("Please type your answer!");
+
+    const doubtRef = ref(db, "doubts/" + id + "/answers");
+    push(doubtRef, answerText);
+
+    document.getElementById(`answer-text-${id}`).value = "";
+  };
+
+  // Delete an answer
+  window.deleteAnswer = function(doubtId, answerKey) {
+    remove(ref(db, `doubts/${doubtId}/answers/${answerKey}`));
+  };
+
+  // Live render doubts
+  const doubtsList = document.getElementById("doubts-list");
+  onValue(ref(db, "doubts"), (snapshot) => {
+    doubtsList.innerHTML = "";
+    if (!snapshot.exists()) {
+      doubtsList.innerHTML = "<p>No doubts added yet.</p>";
+      return;
+    }
+    const doubts = snapshot.val();
+    Object.keys(doubts).reverse().forEach(id => {
+      const d = doubts[id];
+      let answersHTML = "";
+      if (d.answers) {
+        answersHTML += `<h4>Answers:</h4>`;
+        answersHTML += Object.keys(d.answers).map(ansKey => `
+          <div class="answer">
+            ${d.answers[ansKey]}
+            <button class="btn btn-danger" style="width:auto;padding:5px 10px;font-size:12px;" onclick="deleteAnswer('${id}','${ansKey}')">🗑️ Delete</button>
           </div>
-        `;
-      });
-      doubtList.innerHTML = html;
+        `).join("");
+      }
+      doubtsList.innerHTML += `
+        <div class="doubt-item">
+          <div class="doubt-title">${d.title}</div>
+          <div class="doubt-info"><strong>Subject:</strong> ${d.subject}</div>
+          ${d.description ? `<div class="doubt-info"><strong>Description:</strong> ${d.description}</div>` : ""}
+          <small>Posted: ${new Date(d.timestamp).toLocaleString()}</small><br>
+          <button class="btn btn-secondary" style="margin-top:8px;" onclick="toggleAnswerForm('${id}')">💬 Answer</button>
+          <button class="btn btn-danger" style="margin-top:8px;" onclick="deleteDoubt('${id}')">🗑️ Delete Doubt</button>
+          <div id="answer-form-${id}" style="display:none;margin-top:10px;">
+            <textarea id="answer-text-${id}" class="input-field" placeholder="Type your answer here..."></textarea>
+            <button class="btn btn-primary" onclick="submitAnswer('${id}')">Submit Answer</button>
+          </div>
+          <div class="answers">${answersHTML}</div>
+        </div>
+      `;
     });
-  </script>
+  });
+</script>
 
 </body>
 </html>
