@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Doubt Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      width: 80%;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background-color: white;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+
+    h1, h2 {
+      text-align: center;
+    }
+
+    .form {
+      margin-bottom: 30px;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    .btn {
+      background-color: #4CAF50;
+      color: white;
+      padding: 12px;
+      width: 100%;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .btn:hover {
+      background-color: #45a049;
+    }
+
+    .doubt-item {
+      background-color: #f9f9f9;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .doubt-title {
+      font-weight: bold;
+      font-size: 18px;
+    }
+
+    .doubt-info {
+      font-size: 14px;
+      color: #555;
+    }
+
+    .answer-form {
+      display: none;
+      margin-top: 10px;
+    }
+
+    .answer-btn {
+      background-color: #2196F3;
+      color: white;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .answer-btn:hover {
+      background-color: #0b7dda;
+    }
+
+    .answers {
+      margin-top: 10px;
+    }
+
+    .answer {
+      background-color: #e1f5fe;
+      padding: 10px;
+      margin-top: 5px;
+      border-left: 4px solid #2196F3;
+    }
+
+    .delete-btn {
+      background-color: #f44336;
+      color: white;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+    .delete-btn:hover {
+      background-color: #e53935;
+    }
+
+    .export-btn {
+      background-color: #9c27b0;
+      margin-bottom: 10px;
+    }
+
+    .export-btn:hover {
+      background-color: #7b1fa2;
+    }
+
+    @media (max-width: 500px) {
+      .container {
+        width: 90%;
+        padding: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>📚 Daily Doubt Tracker</h1>
+
+    <div class="form">
+      <input type="text" id="subject" placeholder="Subject" class="input-field" maxlength="100">
+      <input type="text" id="title" placeholder="Doubt Title" class="input-field" maxlength="100">
+      <textarea id="description" placeholder="Description (optional)" class="input-field" maxlength="300"></textarea>
+      <button onclick="addDoubt()" class="btn">➕ Add Doubt</button>
+    </div>
+
+    <button onclick="exportDoubts()" class="btn export-btn">📤 Export Doubts (JSON)</button>
+
+    <h2>Your Doubts:</h2>
+    <div id="doubts-list"></div>
+  </div>
+
+  <script>
+    function addDoubt() {
+      const subject = document.getElementById("subject").value.trim();
+      const title = document.getElementById("title").value.trim();
+      const description = document.getElementById("description").value.trim();
+
+      if (!subject || !title) {
+        alert("Please fill out subject and title!");
+        return;
+      }
+
+      let doubts = JSON.parse(localStorage.getItem("doubts")) || [];
+
+      const newDoubt = {
+        id: Date.now(),
+        subject,
+        title,
+        description,
+        answers: []
+      };
+
+      doubts.push(newDoubt);
+      localStorage.setItem("doubts", JSON.stringify(doubts));
+
+      document.getElementById("subject").value = "";
+      document.getElementById("title").value = "";
+      document.getElementById("description").value = "";
+
+      renderDoubts();
+    }
+
+    function renderDoubts() {
+      const doubts = JSON.parse(localStorage.getItem("doubts")) || [];
+      const doubtsList = document.getElementById("doubts-list");
+      doubtsList.innerHTML = "";
+
+      if (doubts.length === 0) {
+        doubtsList.innerHTML = "<p>No doubts added yet. Start by adding one above!</p>";
+        return;
+      }
+
+      doubts.reverse().forEach(doubt => {
+        const doubtElement = document.createElement("div");
+        doubtElement.classList.add("doubt-item");
+
+        doubtElement.innerHTML = `
+          <div class="doubt-title">${doubt.title}</div>
+          <div class="doubt-info"><strong>Subject:</strong> ${doubt.subject}</div>
+          ${doubt.description ? `<div class="doubt-info"><strong>Description:</strong> ${doubt.description}</div>` : ''}
+          
+          <button class="answer-btn" onclick="toggleAnswerForm(${doubt.id})">💬 Answer this doubt</button>
+          <button class="delete-btn" onclick="deleteDoubt(${doubt.id})">🗑️ Delete Doubt</button>
+
+          <div class="answer-form" id="answer-form-${doubt.id}">
+            <textarea id="answer-text-${doubt.id}" class="input-field" placeholder="Type your answer here..."></textarea>
+            <button onclick="submitAnswer(${doubt.id})" class="btn">Submit Answer</button>
+          </div>
+
+          <div class="answers">
+            ${doubt.answers.length > 0 ? `<h4>Answers:</h4>` : ''}
+            ${doubt.answers.map((answer, index) => `
+              <div class="answer">
+                ${answer}
+                <button class="delete-btn" onclick="deleteAnswer(${doubt.id}, ${index})">🗑️ Delete Answer</button>
+              </div>
+            `).join('')}
+          </div>
+        `;
+
+        doubtsList.appendChild(doubtElement);
+      });
+    }
+
+    function toggleAnswerForm(doubtId) {
+      const form = document.getElementById(`answer-form-${doubtId}`);
+      form.style.display = form.style.display === "block" ? "none" : "block";
+    }
+
+    function submitAnswer(doubtId) {
+      const answerText = document.getElementById(`answer-text-${doubtId}`).value.trim();
+
+      if (!answerText) {
+        alert("Please type your answer!");
+        return;
+      }
+
+      let doubts = JSON.parse(localStorage.getItem("doubts")) || [];
+      const doubt = doubts.find(d => d.id === doubtId);
+
+      doubt.answers.push(answerText);
+      localStorage.setItem("doubts", JSON.stringify(doubts));
+
+      document.getElementById(`answer-text-${doubtId}`).value = "";
+      renderDoubts();
+    }
+
+    function deleteDoubt(doubtId) {
+      let doubts = JSON.parse(localStorage.getItem("doubts")) || [];
+      doubts = doubts.filter(doubt => doubt.id !== doubtId);
+
+      localStorage.setItem("doubts", JSON.stringify(doubts));
+      renderDoubts();
+    }
+
+    function deleteAnswer(doubtId, answerIndex) {
+      let doubts = JSON.parse(localStorage.getItem("doubts")) || [];
+      const doubt = doubts.find(d => d.id === doubtId);
+      doubt.answers.splice(answerIndex, 1);
+
+      localStorage.setItem("doubts", JSON.stringify(doubts));
+      renderDoubts();
+    }
+
+    function exportDoubts() {
+      const doubts = localStorage.getItem("doubts");
+      const blob = new Blob([doubts], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "doubts_backup.json";
+      link.click();
+    }
+
+    window.onload = renderDoubts;
+  </script>
+
+</body>
+</html>
